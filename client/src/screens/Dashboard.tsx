@@ -26,12 +26,15 @@ import {
 import { isVideoTransformDevice } from "amazon-chime-sdk-js";
 
 import { useEffect, useState } from "react";
+import ConnectivityCheck from "../components/ConnectivityTest";
 import useMeeting from "../hooks/useMeeting";
 
 const Dashboard = () => {
   const [muted, setMuted] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-
+  const [showConnectivityCheck, setShowConnectivityCheck] = useState(false);
+  const [connectivityCheckResults, setConnectivityCheckResults] =
+    useState(null);
   const {
     joinMeeting,
     isJoining,
@@ -54,6 +57,18 @@ const Dashboard = () => {
     useBackgroundBlur();
   const [isVideoTransformCheckBoxOn, setisVideoTransformCheckBoxOn] =
     useState(false);
+
+  const handleConnectivityCheckComplete = (results) => {
+    setConnectivityCheckResults(results);
+    setShowConnectivityCheck(false);
+
+    setIsStarted(true);
+    // Further actions based on connectivity check results
+  };
+
+  const joinMeetingWithCheck = () => {
+    setShowConnectivityCheck(true);
+  };
 
   useEffect(() => {
     audioVideo?.realtimeSubscribeToReceiveDataMessage("test", (data) => {
@@ -189,6 +204,12 @@ const Dashboard = () => {
     </>
   );
 
+  if (showConnectivityCheck) {
+    return (
+      <ConnectivityCheck onCheckComplete={handleConnectivityCheckComplete} />
+    );
+  }
+
   if (isStarted) {
     return (
       <div
@@ -203,7 +224,7 @@ const Dashboard = () => {
           }}
         >
           <VideoTileGrid noRemoteVideoView={<div>No one joined</div>} />
-          {/* <FeaturedRemoteVideos /> */}
+
           <div
             style={{
               display: "flex",
@@ -269,7 +290,7 @@ const Dashboard = () => {
     );
   }
 
-  return <button onClick={joinMeeting}>Join</button>;
+  <button onClick={joinMeetingWithCheck}>Join with Connectivity Check</button>;
 };
 
 export default Dashboard;

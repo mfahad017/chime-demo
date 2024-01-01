@@ -4,7 +4,15 @@ import {
   useMeetingManager,
   useRosterState,
 } from "amazon-chime-sdk-component-library-react";
-import { MeetingSessionConfiguration } from "amazon-chime-sdk-js";
+import {
+  MeetingSessionConfiguration,
+  CheckAudioConnectivityFeedback,
+  CheckContentShareConnectivityFeedback,
+  CheckVideoConnectivityFeedback,
+  DefaultMeetingReadinessChecker,
+  ConsoleLogger,
+  LogLevel,
+} from "amazon-chime-sdk-js";
 import { useEffect, useState } from "react";
 
 import axiosLib from "axios";
@@ -18,6 +26,7 @@ const useMeeting = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const [meetingId, setMeetingId] = useState("");
+
   const meetingManager = useMeetingManager();
   const audioVideo = useAudioVideo();
   const { roster } = useRosterState();
@@ -40,6 +49,7 @@ const useMeeting = () => {
       await meetingManager.join(meetingSessionConfiguration);
 
       await meetingManager.start();
+
       setIsStarted(true);
     } catch (e) {
       console.log(e);
@@ -110,6 +120,53 @@ const useMeeting = () => {
     console.log("leaveMeeting", lm);
   };
 
+  const performConnectivityTest = async () => {
+    console.log("---- connectivity test started ----");
+    const logger = new ConsoleLogger("MyLogger", LogLevel.INFO);
+
+    if (!meetingManager?.meetingSession) return;
+
+    const meetingReadinessChecker = new DefaultMeetingReadinessChecker(
+      logger,
+      meetingManager?.meetingSession
+    );
+
+    const audioDevices =
+      await meetingManager?.meetingSession.audioVideo.listAudioInputDevices();
+    const videoDevices =
+      await meetingManager?.meetingSession.audioVideo.listVideoInputDevices();
+    // Tests audio connection
+    const audioDeviceInfo = audioDevices[0];
+    const audioFeedback = await meetingReadinessChecker.checkAudioConnectivity(
+      audioDeviceInfo.deviceId
+    );
+    console.log(
+      `Feedback result: ${CheckAudioConnectivityFeedback[audioFeedback]}`
+    );
+
+    // Test video connection
+    const videoInputInfo = videoDevices[0];
+    const videoFeedback = await meetingReadinessChecker.checkVideoConnectivity(
+      videoInputInfo.deviceId
+    );
+    console.log(
+      `Feedback result: ${CheckVideoConnectivityFeedback[videoFeedback]}`
+    );
+
+    // Tests content share connectivity
+    const contentShareFeedback =
+      await meetingReadinessChecker.checkContentShareConnectivity();
+    console.log(
+      `Feedback result: ${CheckContentShareConnectivityFeedback[contentShareFeedback]}`
+    );
+
+    return {
+      audio: audioFeedback,
+      video: videoFeedback,
+      contentShare: contentShareFeedback,
+    };
+  };
+
   useEffect(() => {
     askForDevicePermission();
   }, []);
@@ -123,6 +180,7 @@ const useMeeting = () => {
     setIsStarted,
     muteParticipants,
     muteAllParticipants,
+    performConnectivityTest,
   };
 };
 
