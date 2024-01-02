@@ -33,8 +33,8 @@ const Dashboard = () => {
   const [muted, setMuted] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [showConnectivityCheck, setShowConnectivityCheck] = useState(false);
-  const [connectivityCheckResults, setConnectivityCheckResults] =
-    useState(null);
+  const [showCallScreen, setShowCallScreen] = useState(false);
+
   const {
     joinMeeting,
     isJoining,
@@ -58,15 +58,13 @@ const Dashboard = () => {
   const [isVideoTransformCheckBoxOn, setisVideoTransformCheckBoxOn] =
     useState(false);
 
-  const handleConnectivityCheckComplete = (results) => {
-    setConnectivityCheckResults(results);
-    setShowConnectivityCheck(false);
-
-    setIsStarted(true);
-    // Further actions based on connectivity check results
+  const handleConnectivityCheckComplete = () => {
+    // setShowConnectivityCheck(false);
+    // setShowCallScreen(true);
   };
 
-  const joinMeetingWithCheck = () => {
+  const joinMeetingWithCheck = async () => {
+    await joinMeeting();
     setShowConnectivityCheck(true);
   };
 
@@ -179,8 +177,10 @@ const Dashboard = () => {
     label: "Screen",
   };
 
-  if (isJoining) {
-    return <div>Joining...</div>;
+  if (showConnectivityCheck) {
+    return (
+      <ConnectivityCheck onCheckComplete={handleConnectivityCheckComplete} />
+    );
   }
 
   const Menu = () => (
@@ -204,13 +204,7 @@ const Dashboard = () => {
     </>
   );
 
-  if (showConnectivityCheck) {
-    return (
-      <ConnectivityCheck onCheckComplete={handleConnectivityCheckComplete} />
-    );
-  }
-
-  if (isStarted) {
+  if (showCallScreen) {
     return (
       <div
         style={{
@@ -290,7 +284,13 @@ const Dashboard = () => {
     );
   }
 
-  <button onClick={joinMeetingWithCheck}>Join with Connectivity Check</button>;
+  return (
+    <button onClick={joinMeetingWithCheck}>
+      {showConnectivityCheck || isJoining
+        ? "joining..."
+        : "Join with Connectivity Check"}
+    </button>
+  );
 };
 
 export default Dashboard;

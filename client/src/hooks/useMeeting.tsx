@@ -5,15 +5,15 @@ import {
   useRosterState,
 } from "amazon-chime-sdk-component-library-react";
 import {
-  MeetingSessionConfiguration,
   CheckAudioConnectivityFeedback,
-  CheckContentShareConnectivityFeedback,
+  CheckNetworkTCPConnectivityFeedback,
   CheckVideoConnectivityFeedback,
-  DefaultMeetingReadinessChecker,
   ConsoleLogger,
+  DefaultMeetingReadinessChecker,
   LogLevel,
+  MeetingSessionConfiguration,
 } from "amazon-chime-sdk-js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import axiosLib from "axios";
 
@@ -28,6 +28,7 @@ const useMeeting = () => {
   const [meetingId, setMeetingId] = useState("");
 
   const meetingManager = useMeetingManager();
+
   const audioVideo = useAudioVideo();
   const { roster } = useRosterState();
 
@@ -120,52 +121,68 @@ const useMeeting = () => {
     console.log("leaveMeeting", lm);
   };
 
-  const performConnectivityTest = async () => {
-    console.log("---- connectivity test started ----");
-    const logger = new ConsoleLogger("MyLogger", LogLevel.INFO);
+  const testAudioConnectivity =
+    async (): Promise<CheckAudioConnectivityFeedback> => {
+      if (!meetingManager?.meetingSession)
+        return CheckAudioConnectivityFeedback.AudioNotReceived;
 
-    if (!meetingManager?.meetingSession) return;
+      const meetingReadinessChecker = new DefaultMeetingReadinessChecker(
+        new ConsoleLogger("MyLogger", LogLevel.INFO),
+        meetingManager?.meetingSession
+      );
 
-    const meetingReadinessChecker = new DefaultMeetingReadinessChecker(
-      logger,
-      meetingManager?.meetingSession
-    );
+      const audioDevices =
+        await meetingManager.meetingSession.audioVideo.listAudioInputDevices();
+      if (audioDevices.length === 0)
+        return CheckAudioConnectivityFeedback.ConnectionFailed;
 
-    const audioDevices =
-      await meetingManager?.meetingSession.audioVideo.listAudioInputDevices();
-    const videoDevices =
-      await meetingManager?.meetingSession.audioVideo.listVideoInputDevices();
-    // Tests audio connection
-    const audioDeviceInfo = audioDevices[0];
-    const audioFeedback = await meetingReadinessChecker.checkAudioConnectivity(
-      audioDeviceInfo.deviceId
-    );
-    console.log(
-      `Feedback result: ${CheckAudioConnectivityFeedback[audioFeedback]}`
-    );
+      const audioDeviceInfo = audioDevices[0];
+      const audioFeedback =
+        await meetingReadinessChecker.checkAudioConnectivity(
+          audioDeviceInfo.deviceId
+        );
 
-    // Test video connection
-    const videoInputInfo = videoDevices[0];
-    const videoFeedback = await meetingReadinessChecker.checkVideoConnectivity(
-      videoInputInfo.deviceId
-    );
-    console.log(
-      `Feedback result: ${CheckVideoConnectivityFeedback[videoFeedback]}`
-    );
-
-    // Tests content share connectivity
-    const contentShareFeedback =
-      await meetingReadinessChecker.checkContentShareConnectivity();
-    console.log(
-      `Feedback result: ${CheckContentShareConnectivityFeedback[contentShareFeedback]}`
-    );
-
-    return {
-      audio: audioFeedback,
-      video: videoFeedback,
-      contentShare: contentShareFeedback,
+      return audioFeedback;
     };
-  };
+
+  const testVideoConnectivity =
+    async (): Promise<CheckVideoConnectivityFeedback> => {
+      if (!meetingManager?.meetingSession)
+        return CheckVideoConnectivityFeedback.VideoInputRequestFailed;
+
+      const meetingReadinessChecker = new DefaultMeetingReadinessChecker(
+        new ConsoleLogger("MyLogger", LogLevel.INFO),
+        meetingManager?.meetingSession
+      );
+
+      const videoDevices =
+        await meetingManager.meetingSession.audioVideo.listVideoInputDevices();
+      if (videoDevices.length === 0)
+        return CheckVideoConnectivityFeedback.ConnectionFailed;
+
+      const videoInputInfo = videoDevices[0];
+      const videoFeedback =
+        await meetingReadinessChecker.checkVideoConnectivity(
+          videoInputInfo.deviceId
+        );
+
+      return videoFeedback;
+    };
+
+  const testTCPConnectivity =
+    async (): Promise<CheckNetworkTCPConnectivityFeedback> => {
+      if (!meetingManager?.meetingSession)
+        return CheckNetworkTCPConnectivityFeedback.ConnectionFailed;
+
+      const meetingReadinessChecker = new DefaultMeetingReadinessChecker(
+        new ConsoleLogger("MyLogger", LogLevel.INFO),
+        meetingManager?.meetingSession
+      );
+
+      const tcpConnectivity =
+        await meetingReadinessChecker.checkNetworkTCPConnectivity();
+      return tcpConnectivity;
+    };
 
   useEffect(() => {
     askForDevicePermission();
@@ -180,7 +197,10 @@ const useMeeting = () => {
     setIsStarted,
     muteParticipants,
     muteAllParticipants,
-    performConnectivityTest,
+
+    testAudioConnectivity,
+    testVideoConnectivity,
+    testTCPConnectivity,
   };
 };
 
