@@ -28,6 +28,7 @@ import { isVideoTransformDevice } from "amazon-chime-sdk-js";
 import { useEffect, useState } from "react";
 import ConnectivityCheck from "../components/ConnectivityTest";
 import useMeeting from "../hooks/useMeeting";
+import VideoMatrices from "../components/VideoMatrices";
 
 const Dashboard = () => {
   const [muted, setMuted] = useState(false);
@@ -210,6 +211,7 @@ const Dashboard = () => {
           display: "flex",
         }}
       >
+        <VideoMatrices />
         <div
           style={{
             height: "80vh",
