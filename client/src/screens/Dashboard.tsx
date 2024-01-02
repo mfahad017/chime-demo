@@ -38,7 +38,6 @@ const Dashboard = () => {
   const {
     joinMeeting,
     isJoining,
-    isStarted,
     leaveMeeting,
     setIsStarted,
     muteParticipants,
@@ -59,8 +58,8 @@ const Dashboard = () => {
     useState(false);
 
   const handleConnectivityCheckComplete = () => {
-    // setShowConnectivityCheck(false);
-    // setShowCallScreen(true);
+    setShowConnectivityCheck(false);
+    setShowCallScreen(true);
   };
 
   const joinMeetingWithCheck = async () => {
