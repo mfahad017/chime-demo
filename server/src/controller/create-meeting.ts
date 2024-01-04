@@ -1,17 +1,18 @@
-// @ts-nocheck
 import {
+  ChimeSDKMeetingsClient,
   CreateAttendeeCommand,
   CreateMeetingCommand,
-} from "@aws-sdk/client-chime-sdk-meetings";
-import { Request, Response } from "express";
-import { chime } from "../chime";
-import { randomUUID } from "crypto";
+  CreateMeetingCommandInput,
+} from '@aws-sdk/client-chime-sdk-meetings';
+import { Request, Response } from 'express';
+import { chime } from '../chime';
+import { randomUUID } from 'crypto';
 
 const log = (comment: string, text: unknown) =>
   console.log(comment, JSON.stringify(text, null, 2));
 
 async function createAttendee(meetingId: string) {
-  console.log("Creating Attendee for Meeting: ", meetingId);
+  console.log('Creating Attendee for Meeting: ', meetingId);
   try {
     const attendeeInfo = await chime.send(
       new CreateAttendeeCommand({
@@ -19,39 +20,52 @@ async function createAttendee(meetingId: string) {
         ExternalUserId: randomUUID(),
       })
     );
-    log("Attendee Created", attendeeInfo);
+    log('Attendee Created', attendeeInfo);
+
     return attendeeInfo;
   } catch (err) {
-    log("createAttendee error", err);
+    log('createAttendee error', err);
     return false;
   }
 }
 
+const createMeetingWrapper = async (
+  c: ChimeSDKMeetingsClient,
+  input: CreateMeetingCommandInput
+) => {
+  try {
+    const meetingInfo = await chime.send(new CreateMeetingCommand(input));
+    return meetingInfo;
+  } catch (err) {
+    throw err;
+  }
+};
+
 async function createMeeting(requestId: string) {
-  console.log("Creating Meeting for Request ID: ", requestId);
+  console.log('Creating Meeting for Request ID: ', requestId);
   try {
     const meetingInfo = await chime.send(
       new CreateMeetingCommand({
         ClientRequestToken: requestId,
-        MediaRegion: "us-east-1",
+        MediaRegion: 'us-east-1',
         ExternalMeetingId: requestId,
       })
     );
-    log("Meeting Created", meetingInfo);
+    log('Meeting Created', meetingInfo);
     return meetingInfo;
   } catch (err) {
-    log("createMeeting error", err);
+    log('createMeeting error', err);
     return false;
   }
 }
 
 export const startMeeting = async (req: Request, res: Response) => {
   try {
-    log("Time", new Date().toLocaleTimeString());
+    log('Time', new Date().toLocaleTimeString());
 
-    const requestedMeeting = req.query.meetingId;
+    const requestedMeeting = req.query.meetingId as string;
 
-    console.log("Requested Meeting", requestedMeeting);
+    console.log('Requested Meeting', requestedMeeting);
     // By using the requestedMeeting as the RequestToken,
     // if a meeting exists, a createMeeting will return
     // info for an existing meeting with the same RequestToken.
@@ -72,11 +86,11 @@ export const startMeeting = async (req: Request, res: Response) => {
         res.status(200).send(responseInfo);
         return;
       } else {
-        res.status(503).send("Error creating Attendee");
+        res.status(503).send('Error creating Attendee');
         return;
       }
     } else {
-      res.status(503).send("Error creating Meeting");
+      res.status(503).send('Error creating Meeting');
       return;
     }
   } catch (err) {
